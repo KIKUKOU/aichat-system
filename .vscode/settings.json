@@ -1,0 +1,10 @@
+{
+    "[python]": {
+        "editor.defaultFormatter": "charliermarsh.ruff",
+        "editor.formatOnType": true
+    },
+    "ruff.organizeImports": false,
+    "ruff.format.args": [
+        "--config=pyproject.toml"
+    ],
+}
