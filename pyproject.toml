@@ -1,0 +1,30 @@
+[project]
+name = "aichat-system"
+version = "0.0.1"
+
+[tool.ruff]
+line-length = 119
+select = ["ALL"]
+ignore = ["D200", "D205", "D212", "PLR1711", "SIM108", "TD002", "UP015"]
+target-version = "py39"
+
+[tool.ruff.per-file-ignores]
+# abstract class
+"aichatsystem/llm/llm_wrapper.py" = ["ANN401"]
+"aichatsystem/tts/tts_wrapper.py" = ["ANN401"]
+# logger
+"aichatsystem/utilities/log_utilities.py" = ["T201"]
+"aichatsystem/systemlogger/discord_logger.py" = ["ANN401"]
+# main
+"aichatsystem/console_chat.py" = ["T201"]
+"aichatsystem/sound_test.py" = ["T201"]
+
+[tool.ruff.lint.flake8-quotes]
+inline-quotes = "single"
+multiline-quotes = "single"
+
+[tool.ruff.pydocstyle]
+convention = "google"
+
+[tool.ruff.format]
+quote-style = "single"
