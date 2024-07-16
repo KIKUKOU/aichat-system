@@ -118,6 +118,28 @@ class GeminiWrapper(LLMWrapper):
             self._responce_type = type(response)
             return response
 
+    def get_chat_response(
+        self,
+        question: str,
+        config: dict[str, Any] | None = None,
+        add_prompt: list[dict[str, str]] | None = None,
+    ) -> GenerateContentResponse:
+        """
+        Get a chat response from the OpenAI based on the given question and optional system prompt.
+
+        Args:
+            question (str): The user's question or input.
+            config (dict[str, Any] | None, optional): Configuration for this specific request. Defaults to None.
+            add_prompt (list[dict[str, str]] | None, optional): Additional prompt to guide the LLM's behavior.
+                Defaults to None.
+
+        Returns:
+            ChatCompletionChunk | ChatCompletion: The chat response from the LLM.
+            list[dict[str, str]]: All prompt.
+        """
+        response, prompt = super().get_chat_response(question, config, add_prompt)
+        return response, prompt
+
     def read_text(self, response: GenerateContentResponse) -> str:
         """
         Extract the text content from the Gemini response.
