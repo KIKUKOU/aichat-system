@@ -1,0 +1,40 @@
+DEBUG:
+  SOUND: True
+
+COMMON:
+  SOUND_DEBUG: False
+  SYSTEM_LOG: True
+
+DISCORD:
+  API_KEY: key
+  COMMAND_PREFIX: "*"
+  TARGET_TXTCHANNEL: "text_cannel_name"
+  TARGET_VOICE_CHANNEL: "voice_cannel_name"
+
+LLM:
+  OPENAI_API_KEY: key
+  GEMINI_API_KEY: key
+  USE_LLM: "openai"
+  USE_MODEL: "gpt-4o"
+
+TTS:
+  HOST_IP: 127.0.0.1
+  PORT: 50021
+  USE_TTS: "voicevox"
+  SPEAKER_ID: 46
+  SPEED_SCALE: 1.2
+  VOLUME_SCALE: 0.4
+
+FFMPEG:
+  FADE_LEN: 0.1
+
+CHARACTER:
+  USE_PROMPT_LOG: True
+  USE_FILLER: False
+  PROMPT_LOG_DIR: "./log_files/prompt/"
+  SYSTEM_PROMPT_DIR: "./prompt_files/system/"
+  CHARACTER_PROMPT_DIR: "./prompt_files/character/"
+  PROMPT_LOG_NAME: "prompt_log.csv"
+  SYSTEM_PROMPT_NAME: "voicechat.csv"
+  CHARACTER_PROMPT_NAME: "nojyaloli.csv"
+  FILLER_DIR: ."/sound_files/filler/nojyaloli/"
