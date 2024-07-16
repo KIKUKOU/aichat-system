@@ -32,7 +32,7 @@ class VoicevoxWrapper(TTSWrapper):
 
         Args:
             address (str): The Voicevox server ip address with port. Dafault in '127.0.0.1:50021'.
-            config (Dict[str, Any], optional): Configuration options for the TTS. Defaults to {}.
+            config (dict[str, Any], optional): Configuration options for the TTS. Defaults to None.
         """
         config = config or {}
         config = copy.deepcopy(config)
@@ -52,7 +52,7 @@ class VoicevoxWrapper(TTSWrapper):
 
         Args:
             text (str): The text to be converted to speech.
-            config (Dict[str, Any]): Configuration options for the audio query. Defaults to {}.
+            config (dict[str, Any]): Configuration options for the audio query.  Defaults to None.
 
         Returns:
             dict: The generated audio query for voicevox.
@@ -88,7 +88,7 @@ class VoicevoxWrapper(TTSWrapper):
 
         Args:
             audio_query (dict): The audio query to be converted to voice.
-            config (dict[str, Any]): Configuration options for voice generation.
+            config (dict[str, Any]): Configuration options for voice generation. Defaults to None.
 
         Returns:
             bytes: The generated voice data in wav format.

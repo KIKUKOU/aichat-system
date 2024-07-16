@@ -64,7 +64,7 @@ class TTSWrapper(metaclass=ABCMeta):
 
         Args:
             audio_query (Any): The audio query to be converted to voice.
-            config (Dict[str, Any]): Configuration options for voice generation.
+            config (dict[str, Any]): Configuration options for voice generation. Defaults to None.
 
         Returns:
             Any: The generated voice data.
