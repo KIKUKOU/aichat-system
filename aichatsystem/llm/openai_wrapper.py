@@ -58,10 +58,11 @@ class OpenAIWrapper(LLMWrapper):
             'gpt-4',
             'gpt-4-turbo',
             'gpt-4o',
+            'gpt-4o-mini',
         ]
         self.model_name_dict = {
-            'default': 'gpt-3.5-turbo',
-            'cheep': 'gpt-3.5-turbo',
+            'default': 'gpt-4o-mini',
+            'cheep': 'gpt-4o-mini',
             'rich': 'gpt-4o',
         }
         self.prompt_log_name = prompt_log_name
@@ -240,5 +241,3 @@ class OpenAIWrapper(LLMWrapper):
         if 'model_name' in config and config['model_name'] not in self.model_name_list:
             raise_message = f'Invalid model name. Supported models are: {", ".join(self.model_name_list)}'
             raise ValueError(raise_message)
-
-        return
