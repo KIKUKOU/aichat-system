@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import copy
+import datetime
 import os
 import random
 import time
@@ -22,6 +23,7 @@ import utilities.text_utilities as text_util
 from discord.ext import commands  # pip install discord.py[voice]
 from llm.gemini_wrapper import GeminiWrapper
 from llm.openai_wrapper import OpenAIWrapper
+from ragtools.open_wether_map import OpenWetherMap
 from systemlogger import discord_logger
 from tts.voicevox_wrapper import VoicevoxWrapper
 
@@ -40,7 +42,7 @@ OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 GEMINI_API_KEY = os.getenv('GOOGLE_GEMINI_API_KEY')
 LLM_CONFIG = {}
 LLM_CONFIG['use_llm'] = 'openai'
-LLM_CONFIG['use_model'] = 'gpt-4o'
+LLM_CONFIG['use_model'] = 'gpt-4o-mini'
 
 # TTS Config
 TTS_HOST_IP = '192.168.100.211'
@@ -60,6 +62,7 @@ USE_FILLER = False
 PROMPT_LOG_NAME = './log_files/prompt/prompt_log.csv'
 CHARACTER_PROMPT_NAME = './prompt_files/character/nojyaloli.csv'
 SYSTEM_PROMPT_NAME = './prompt_files/system/voicechat.csv'
+TOOLS_CHOICE_PROMPT_NAME = './prompt_files/system/tools_choice.csv'
 
 filler_words = ['あー', 'ふむ', 'ほう', 'なるほど', 'うむ']
 FILLER_DIR = './sound_files/filler/'
@@ -124,6 +127,28 @@ if __name__ == '__main__':
                 send_text = 'わしはボイスチャンネルに入っておらぬぞ。'
                 await send_message(ctx.message.channel, send_text)
 
+    @discord_client.command()
+    async def wether(ctx: commands.Context, city: str, time: str) -> None:
+        """
+        Disconnect the bot from the voice channel.
+
+        Args:
+            ctx (commands.Context): The context of the command invocation.
+            city (str): Wether area.
+            time (int): Wether time.
+        """
+        api_key = 'a51b01c289dfcc6c5825e18dec77592c'
+        wether_client = OpenWetherMap(api_key)
+        wether_data = wether_client.get_response({'city': city, 'time': int(time)})
+        forecast_time = datetime.datetime.fromtimestamp(wether_data['dt'])  # noqa: DTZ006
+        send_text = ''
+        send_text += f'地点: {city}\n'
+        send_text += f'日時: {forecast_time}\n'
+        send_text += f"天気: {wether_data['weather'][0]['description']}\n"
+        send_text += f"気温: {wether_data['main']['temp']}°C\n"
+        send_text += f"湿度: {wether_data['main']['humidity']}%"
+        await send_message(ctx.message.channel, send_text)
+
     @discord_client.listen()
     async def on_ready() -> None:
         """
@@ -159,6 +184,8 @@ if __name__ == '__main__':
         if is_human and is_target_text_channel:
             question = message.content
             discord_logger.mentioned(message, question)
+            use_tools = await tell_tools_choice(question)
+            await reply_massage(message, use_tools)
             reply_text = await aichat(message, question, llm_client, tts_client)
             await reply_massage(message, reply_text)
             discord_logger.standby()
@@ -186,6 +213,27 @@ if __name__ == '__main__':
         reply = f'{message.author.mention} {reply_text}'
         await message.channel.send(reply)
         discord_logger.reply_massage(message, reply_text)
+
+    async def tell_tools_choice(input_text: str) -> str:
+        """
+        Generate an AI response to the input text, optionally with voice output.
+
+        Args:
+            input_text (str): The input text to generate a response for.
+
+        Returns:
+            str: The generated response text.
+        """
+        if LLM_CONFIG['use_llm'] == 'openai':
+            llm_client = OpenAIWrapper(OPENAI_API_KEY, prompt_log_name=PROMPT_LOG_NAME)
+        elif LLM_CONFIG['use_llm'] == 'gemini':
+            llm_client = GeminiWrapper(GEMINI_API_KEY, prompt_log_name=PROMPT_LOG_NAME)
+
+        llm_config = copy.deepcopy(LLM_CONFIG)
+        prompt = llm_client.load_prompt(TOOLS_CHOICE_PROMPT_NAME)
+        prompt = llm_client.make_prompt(prompt, 'user', input_text)
+        response = llm_client.get_response(prompt, llm_config)
+        return llm_client.read_text(response)
 
     async def aichat(message: discord.Message, input_text: str, llm_client: Any, tts_client: Any) -> str:  # noqa: ANN401, C901, PLR0912, PLR0915
         # TODO: Declare each client when it is used within a function.  # noqa: FIX002
