@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-The class wrap google tts.
+The abstract class for wrap tts.
 """
 
 from __future__ import annotations
