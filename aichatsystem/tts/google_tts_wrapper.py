@@ -15,8 +15,10 @@ from google.cloud import texttospeech  # pip install google-cloud-texttospeech
 if TYPE_CHECKING:
     from google.cloud.texttospeech import SynthesisInput  # pip install google-cloud-texttospeech
 
+from .tts_wrapper import TTSWrapper
 
-class GoogleTTSWrapper:
+
+class GoogleTTSWrapper(TTSWrapper):
     """
     Wrapper class for the Google-TTS API.
 
