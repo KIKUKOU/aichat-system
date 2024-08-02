@@ -15,7 +15,7 @@ import simpleaudio as audio  # pip install simpleaudio
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
-class SoundControler:
+class SoundController:
     """
     The class and functions for play wav sound.
     """
