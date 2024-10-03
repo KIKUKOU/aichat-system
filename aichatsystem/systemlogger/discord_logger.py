@@ -173,7 +173,7 @@ def generate_finish(generation_time: float) -> None:
     return
 
 
-def speach_generate_finish(generated_text: str) -> None:
+def speech_generate_finish(generated_text: str) -> None:
     """
     At at aichat() in finish speech or generate finish.
 
