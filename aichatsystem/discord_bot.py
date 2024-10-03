@@ -23,7 +23,8 @@ import utilities.text_utilities as text_util
 from discord.ext import commands  # pip install discord.py[voice]
 from llm.gemini_wrapper import GeminiWrapper
 from llm.openai_wrapper import OpenAIWrapper
-from ragtools.open_wether_map import OpenWetherMap
+from ragtools.google_search import GoogleSearch
+from ragtools.open_weather_map import OpenWeatherMap
 from systemlogger import discord_logger
 from tts.voicevox_wrapper import VoicevoxWrapper
 
@@ -63,6 +64,8 @@ PROMPT_LOG_NAME = './log_files/prompt/prompt_log.csv'
 CHARACTER_PROMPT_NAME = './prompt_files/character/nojyaloli.csv'
 SYSTEM_PROMPT_NAME = './prompt_files/system/voicechat.csv'
 TOOLS_CHOICE_PROMPT_NAME = './prompt_files/system/tools_choice.csv'
+CHECH_WEATHER_PROMPT_NAME = './prompt_files/system/check_weather.csv'
+WEB_SEARCH_PROMPT_NAME = './prompt_files/system/search_keywords.csv'
 
 filler_words = ['あー', 'ふむ', 'ほう', 'なるほど', 'うむ']
 FILLER_DIR = './sound_files/filler/'
@@ -70,6 +73,9 @@ FILLER_DIR = './sound_files/filler/'
 # Grobal Value
 
 # other
+WEATHER_API_KEY = os.getenv('OPEN_WEATHER_MAP_API_KEY')
+GCP_API_KEY = os.getenv('GOOGLE_CUSTOM_SEARCH_API_KEY')
+GOOGLE_CSE_ID = os.getenv('GOOGLE_CUSTOM_SEARCH_CSE_ID')
 
 
 def get_llm_client() -> Any:  # noqa: ANN401
@@ -154,25 +160,24 @@ if __name__ == '__main__':
                 await send_message(ctx.message.channel, send_text)
 
     @discord_client.command()
-    async def wether(ctx: commands.Context, city: str, time: str) -> None:
+    async def weather(ctx: commands.Context, city: str, time: str) -> None:
         """
-        Disconnect the bot from the voice channel.
+        Tell weather.
 
         Args:
             ctx (commands.Context): The context of the command invocation.
-            city (str): Wether area.
-            time (int): Wether time.
+            city (str): weather area.
+            time (int): weather time.
         """
-        api_key = 'a51b01c289dfcc6c5825e18dec77592c'
-        wether_client = OpenWetherMap(api_key)
-        wether_data = wether_client.get_response({'city': city, 'time': int(time)})
-        forecast_time = datetime.datetime.fromtimestamp(wether_data['dt'])  # noqa: DTZ006
+        weather_client = OpenWeatherMap(WEATHER_API_KEY)
+        weather_data = weather_client.get_response({'city': city, 'time': int(time)})
+        forecast_time = datetime.datetime.fromtimestamp(weather_data['dt'])  # noqa: DTZ006
         send_text = ''
         send_text += f'地点: {city}\n'
         send_text += f'日時: {forecast_time}\n'
-        send_text += f"天気: {wether_data['weather'][0]['description']}\n"
-        send_text += f"気温: {wether_data['main']['temp']}°C\n"
-        send_text += f"湿度: {wether_data['main']['humidity']}%"
+        send_text += f"天気: {weather_data['weather'][0]['description']}\n"
+        send_text += f"気温: {weather_data['main']['temp']}°C\n"
+        send_text += f"湿度: {weather_data['main']['humidity']}%"
         await send_message(ctx.message.channel, send_text)
 
     @discord_client.listen()
@@ -211,7 +216,16 @@ if __name__ == '__main__':
             question = message.content
             discord_logger.mentioned(message, question)
             use_tools = await tell_tools_choice(question)
-            await reply_massage(message, use_tools)
+            if use_tools[0] == "'":
+                use_tools = use_tools[1:-1]
+
+            if use_tools == '天気予報':
+                weather = await tell_weather(question)
+                question = str(f'{weather}/n') + question
+            elif use_tools == 'ネット検索':
+                search_result = await web_search(question, 3)
+                question = str(f'{search_result}/n') + question
+
             reply_text = await aichat(message, question)
             await reply_massage(message, reply_text)
             discord_logger.standby()
@@ -250,16 +264,71 @@ if __name__ == '__main__':
         Returns:
             str: The generated response text.
         """
-        if LLM_CONFIG['use_llm'] == 'openai':
-            llm_client = OpenAIWrapper(OPENAI_API_KEY, prompt_log_name=PROMPT_LOG_NAME)
-        elif LLM_CONFIG['use_llm'] == 'gemini':
-            llm_client = GeminiWrapper(GEMINI_API_KEY, prompt_log_name=PROMPT_LOG_NAME)
-
+        llm_client = get_llm_client()
         llm_config = copy.deepcopy(LLM_CONFIG)
+
         prompt = llm_client.load_prompt(TOOLS_CHOICE_PROMPT_NAME)
         prompt = llm_client.make_prompt(prompt, 'user', input_text)
         response = llm_client.get_response(prompt, llm_config)
         return llm_client.read_text(response)
+
+    async def tell_weather(input_text: str) -> str:
+        """
+        Tell weather by AI and open weather map.
+
+        Args:
+            input_text (str): The input text to generate a response for.
+
+        Returns:
+            str: The generated response text.
+        """
+        llm_client = get_llm_client()
+        llm_config = copy.deepcopy(LLM_CONFIG)
+
+        weather_client = OpenWeatherMap(WEATHER_API_KEY)
+
+        prompt = llm_client.load_prompt(CHECH_WEATHER_PROMPT_NAME)
+        prompt = llm_client.make_prompt(prompt, 'user', input_text)
+        llm_response = llm_client.get_response(prompt, llm_config)
+        weather_keywords = llm_client.read_text(llm_response)
+        if weather_keywords[0] == "'":
+            weather_keywords = weather_keywords[1:-1]
+
+        weather_keywords = weather_keywords.split(',')
+        weather_words = {'city': weather_keywords[0:2]}
+        weather_words['time'] = 0
+        # TODO: 時刻変化に対応する。技術が足りないのでそのうち修正する。  # noqa: FIX002
+        # ISSUE-008
+        data = weather_client.get_response(weather_words)
+        return weather_client.convert_weather_data_by_5days(data)
+
+    async def web_search(
+        input_text: str,
+        num_of_items: int = 3,
+    ) -> str:
+        """
+        .
+
+        Args:
+            input_text (str): The input text to generate a response for.
+            num_of_items(int): num of use articles. Default is 3.
+
+        Returns:
+            str: The generated response text.
+        """
+        llm_client = get_llm_client()
+        llm_config = copy.deepcopy(LLM_CONFIG)
+
+        search_client = GoogleSearch(GCP_API_KEY, GOOGLE_CSE_ID)
+
+        prompt = llm_client.load_prompt(WEB_SEARCH_PROMPT_NAME)
+        prompt = llm_client.make_prompt(prompt, 'user', input_text)
+        llm_response = llm_client.get_response(prompt, llm_config)
+        search_keywords = llm_client.read_text(llm_response)
+        # TODO: 時刻変化に対応する。技術が足りないのでそのうち修正する。  # noqa: FIX002
+        # ISSUE-008
+        data = search_client.get_response(search_keywords, num_of_items)
+        return search_client.convert_search_result(data)
 
     async def aichat(message: discord.Message, input_text: str) -> str:  # noqa: C901, PLR0912, PLR0915
         # TODO: Declare each client when it is used within a function.  # noqa: FIX002
