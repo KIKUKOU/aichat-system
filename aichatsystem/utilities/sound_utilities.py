@@ -9,7 +9,7 @@ import threading
 import wave
 from typing import Callable
 
-import pyaudio as audio  # pip install simpleaudio
+import pyaudio as audio  # pip install pyaudio
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
