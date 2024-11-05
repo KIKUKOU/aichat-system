@@ -444,10 +444,10 @@ if __name__ == '__main__':
 
         return llm_config, voice_config
 
-    def initialize_sound_controller(voice_config: dict) -> tuple[sound_util.SoundControler, int]:
+    def initialize_sound_controller(voice_config: dict) -> tuple[sound_util.SoundController, int]:
         """Initialize sound controller and talk counter."""
         if voice_config['speaker_ID'] != -1 or SOUND_DEBUG:
-            return sound_util.SoundControler(), 0
+            return sound_util.SoundController(), 0
         return None, 0
 
     def generate_llm_response(llm_client: Any, input_text: str, llm_config: dict) -> tuple[Any, Any]:  # noqa: ANN401
@@ -491,12 +491,12 @@ if __name__ == '__main__':
 
         Args:
             message (discord.Message): The received message object.
-            sound_controller (sound_util.SoundControler): The sound controller object.
+            sound_controller (sound_util.SoundController): The sound controller object.
             text_buffer (str): The text to convert to speech.
             voice_config (Dict[str, Any]): Configuration for the voice generation.
 
         Returns:
-            sound_util.SoundControler: The updated sound controller.
+            sound_util.SoundController: The updated sound controller.
         """
         discord_logger.output_voice(text_buffer)
         audio_query = tts_client.generate_audio_query(text_buffer, voice_config)

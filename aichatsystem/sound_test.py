@@ -65,7 +65,7 @@ if __name__ == '__main__':
         # play voice
         # NOTE: Play audio while generating text with GPT and generating voice with VOICEVOX.
         #       For that purpose, we implemented parallel processing using threading.
-        sound_controler.append_thread(sound_util.play_wav, file_name)
+        sound_controler.append_thread(sound_util.play_wav, [file_name])
         sound_controler.thread_control()
 
     while not sound_controler.is_finish_all_thread():
