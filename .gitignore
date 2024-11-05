@@ -1,6 +1,9 @@
 # temp files
 後で整理する
 
+#raw config file
+config.yaml
+
 # log files
 log_files/prompt/*
 log_files/system/*
