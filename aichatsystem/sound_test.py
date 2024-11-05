@@ -53,7 +53,7 @@ if __name__ == '__main__':
     time_s = time.perf_counter()
     word_marks = text_util.WordMarks()
     texts = word_marks.split_text_for_voice(text)
-    sound_controler = sound_util.SoundControler()
+    sound_controler = sound_util.SoundController()
     for txt in texts:
         time_g_s = time.perf_counter()
         audio_query = TTS_client.generate_audio_query(txt, voice_config)
