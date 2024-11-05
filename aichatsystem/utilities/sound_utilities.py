@@ -9,7 +9,7 @@ import threading
 import wave
 from typing import Callable
 
-import simpleaudio as audio  # pip install simpleaudio
+import pyaudio as audio  # pip install simpleaudio
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -108,7 +108,20 @@ def play_wav(file_name: str) -> None:
     """
     Play wav file.
     """
-    wav_obj = audio.WaveObject.from_wave_file(file_name)
-    play_obj = wav_obj.play()
-    play_obj.wait_done()
+    chunk = 1024
+    with wave.open(file_name, 'rb') as wav_obj:
+        audio_obj = audio.PyAudio()
+        stream = audio_obj.open(
+            format=audio_obj.get_format_from_width(wav_obj.getsampwidth()),
+            channels=wav_obj.getnchannels(),
+            rate=wav_obj.getframerate(),
+            output=True,
+        )
+        data = wav_obj.readframes(chunk)
+        while len(data := wav_obj.readframes(chunk)):
+            stream.write(data)
+
+        stream.stop_stream()
+        stream.close()
+        audio_obj.terminate()
     return
