@@ -36,6 +36,8 @@ SYSTEM_LOG = True
 DISCORD_API_KEY = os.getenv('DISCORD_API_KEY')
 TARGET_TEXT_CHANNEL = 'bot操作用（ミュート推奨）'  # noqa: RUF001
 TARGET_VOICE_CHANNEL = '雑談ボイチャ'
+TARGET_READING_TEXT_CHANNEL = '雑談テキスト'
+TARGET_READING_VOICE_CHANNEL = '雑談ボイチャ'
 COMMAND_PREFIX = '*'
 
 # LLM Config
@@ -195,6 +197,22 @@ if __name__ == '__main__':
         discord_logger.standby()
 
     @discord_client.event
+    async def on_voice_state_update(member, before, after):
+        # ボットの動作は無視
+        if member.bot:
+            return
+
+        # ユーザーがVCに参加した場合
+        if before.channel is None and after.channel is not None:
+            if not after.channel.guild.voice_client:
+                await after.channel.connect()
+
+        # VCから全員いなくなった場合
+        elif before.channel is not None and len(before.channel.members) == 1:
+            if before.channel.guild.voice_client:
+                await before.channel.guild.voice_client.disconnect()
+
+    @discord_client.event
     async def on_message(message: discord.Message) -> None:
         """
         Event handler for incoming messages. Processes commands and generates AI responses.
@@ -204,6 +222,7 @@ if __name__ == '__main__':
         """
         is_human = not message.author.bot
         is_target_text_channel = message.channel.name == TARGET_TEXT_CHANNEL
+        is_target_reading_text_channel = message.channel.name == TARGET_READING_TEXT_CHANNEL
         is_mentioned = discord_client.user in message.mentions  # noqa: F841
         # NOTE: The value will be used in a future.
         is_command = message.content[0] == COMMAND_PREFIX
@@ -211,6 +230,53 @@ if __name__ == '__main__':
         if is_human and is_command and is_target_text_channel:
             await discord_client.process_commands(message)
             return
+
+        if is_human and is_target_reading_text_channel:
+            time_start = time.perf_counter()
+            _, voice_config = prepare_configs(message)
+            sound_controller, talk_counter = initialize_sound_controller(voice_config)
+            word_marks = text_util.WordMarks()
+            text_buffer = ''
+            is_make_voice = False
+
+            user_name = message.author.display_name
+            speach_start_time = await first_talk_prosess(time_start)
+
+            sound_controller = await play_voice_process(
+                message,
+                sound_controller,
+                user_name,
+                voice_config,
+            )
+
+            txt = message.content
+            for letter in txt:
+                is_sp, is_p, is_e, is_q, is_n = word_marks.check_letter(letter)
+                if not is_sp and is_make_voice and len(text_buffer) > 0:
+                    sound_controller = await play_voice_process(
+                        message,
+                        sound_controller,
+                        text_buffer,
+                        voice_config,
+                    )
+                    text_buffer = ''
+                    is_make_voice = False
+                    talk_counter += 1
+                    await asyncio.sleep(0.1)
+
+                if not is_n:
+                    text_buffer = text_buffer + letter
+
+                if is_sp:
+                    is_make_voice = True
+
+            sound_controller = await play_voice_process(message, sound_controller, text_buffer, voice_config)
+            while not sound_controller.is_finish_all_thread():
+                await asyncio.sleep(0.1)
+                sound_controller.thread_control()
+
+            speach_finish_time = time.perf_counter() - time_start
+            discord_logger.speach_finish(speach_start_time, speach_finish_time)
 
         if is_human and is_target_text_channel:
             question = message.content
