@@ -207,10 +207,39 @@ if __name__ == '__main__':
             if not after.channel.guild.voice_client:
                 await after.channel.connect()
 
+            time_start = time.perf_counter()
+            _, voice_config = prepare_configs(after.channel.guild.voice_client)
+            sound_controller, _ = initialize_sound_controller(voice_config)
+            user_name = member.display_name
+            content = user_name + 'さんが参加しました'
+            speach_start_time = await first_talk_prosess(time_start)
+            sound_controller = await play_voice_process(after.channel, sound_controller, content, voice_config)
+            while not sound_controller.is_finish_all_thread():
+                await asyncio.sleep(0.1)
+                sound_controller.thread_control()
+
+            speach_finish_time = time.perf_counter() - time_start
+            discord_logger.speach_finish(speach_start_time, speach_finish_time)
+
         # VCから全員いなくなった場合
-        elif before.channel is not None and len(before.channel.members) == 1:
-            if before.channel.guild.voice_client:
-                await before.channel.guild.voice_client.disconnect()
+        elif before.channel is not None and after.channel is None:
+            time_start = time.perf_counter()
+            _, voice_config = prepare_configs(before.channel.guild.voice_client)
+            sound_controller, _ = initialize_sound_controller(voice_config)
+            user_name = member.display_name
+            content = user_name + 'さんが退出しました'
+            speach_start_time = await first_talk_prosess(time_start)
+            sound_controller = await play_voice_process(before.channel, sound_controller, content, voice_config)
+            while not sound_controller.is_finish_all_thread():
+                await asyncio.sleep(0.1)
+                sound_controller.thread_control()
+
+            speach_finish_time = time.perf_counter() - time_start
+            discord_logger.speach_finish(speach_start_time, speach_finish_time)
+
+            if len(before.channel.members) == 1:
+                if before.channel.guild.voice_client:
+                    await before.channel.guild.voice_client.disconnect()
 
     @discord_client.event
     async def on_message(message: discord.Message) -> None:
