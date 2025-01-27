@@ -197,7 +197,14 @@ if __name__ == '__main__':
         discord_logger.standby()
 
     @discord_client.event
-    async def on_voice_state_update(member, before, after):
+    async def on_voice_state_update(
+        member: discord.Member,
+        before: discord.VoiceState,
+        after: discord.VoiceState,
+    ) -> None:
+        """
+        Event handler for when user join a voice channel.
+        """
         # ボットの動作は無視
         if member.bot:
             return
@@ -237,9 +244,8 @@ if __name__ == '__main__':
             speach_finish_time = time.perf_counter() - time_start
             discord_logger.speach_finish(speach_start_time, speach_finish_time)
 
-            if len(before.channel.members) == 1:
-                if before.channel.guild.voice_client:
-                    await before.channel.guild.voice_client.disconnect()
+            if len(before.channel.members) == 1 and before.channel.guild.voice_client:
+                await before.channel.guild.voice_client.disconnect()
 
     @discord_client.event
     async def on_message(message: discord.Message) -> None:
@@ -261,51 +267,8 @@ if __name__ == '__main__':
             return
 
         if is_human and is_target_reading_text_channel:
-            time_start = time.perf_counter()
-            _, voice_config = prepare_configs(message)
-            sound_controller, talk_counter = initialize_sound_controller(voice_config)
-            word_marks = text_util.WordMarks()
-            text_buffer = ''
-            is_make_voice = False
-
-            user_name = message.author.display_name
-            speach_start_time = await first_talk_prosess(time_start)
-
-            sound_controller = await play_voice_process(
-                message,
-                sound_controller,
-                user_name,
-                voice_config,
-            )
-
-            txt = message.content
-            for letter in txt:
-                is_sp, is_p, is_e, is_q, is_n = word_marks.check_letter(letter)
-                if not is_sp and is_make_voice and len(text_buffer) > 0:
-                    sound_controller = await play_voice_process(
-                        message,
-                        sound_controller,
-                        text_buffer,
-                        voice_config,
-                    )
-                    text_buffer = ''
-                    is_make_voice = False
-                    talk_counter += 1
-                    await asyncio.sleep(0.1)
-
-                if not is_n:
-                    text_buffer = text_buffer + letter
-
-                if is_sp:
-                    is_make_voice = True
-
-            sound_controller = await play_voice_process(message, sound_controller, text_buffer, voice_config)
-            while not sound_controller.is_finish_all_thread():
-                await asyncio.sleep(0.1)
-                sound_controller.thread_control()
-
-            speach_finish_time = time.perf_counter() - time_start
-            discord_logger.speach_finish(speach_start_time, speach_finish_time)
+            await reading_chat(message)
+            return
 
         if is_human and is_target_text_channel:
             question = message.content
@@ -325,6 +288,59 @@ if __name__ == '__main__':
             await reply_massage(message, reply_text)
             discord_logger.standby()
             return
+
+    async def reading_chat(message: discord.Message) -> None:
+        """
+        Reading chat at text channel for voice chat.
+
+        Args:
+            message (discord.Message): The received message object.
+        """
+        time_start = time.perf_counter()
+        _, voice_config = prepare_configs(message)
+        sound_controller, talk_counter = initialize_sound_controller(voice_config)
+        word_marks = text_util.WordMarks()
+        text_buffer = ''
+        is_make_voice = False
+
+        user_name = message.author.display_name
+        speach_start_time = await first_talk_prosess(time_start)
+
+        sound_controller = await play_voice_process(
+            message,
+            sound_controller,
+            user_name,
+            voice_config,
+        )
+
+        txt = message.content
+        for letter in txt:
+            is_sp, is_p, is_e, is_q, is_n = word_marks.check_letter(letter)
+            if not is_sp and is_make_voice and len(text_buffer) > 0:
+                sound_controller = await play_voice_process(
+                    message,
+                    sound_controller,
+                    text_buffer,
+                    voice_config,
+                )
+                text_buffer = ''
+                is_make_voice = False
+                talk_counter += 1
+                await asyncio.sleep(0.1)
+
+            if not is_n:
+                text_buffer = text_buffer + letter
+
+            if is_sp:
+                is_make_voice = True
+
+        sound_controller = await play_voice_process(message, sound_controller, text_buffer, voice_config)
+        while not sound_controller.is_finish_all_thread():
+            await asyncio.sleep(0.1)
+            sound_controller.thread_control()
+
+        speach_finish_time = time.perf_counter() - time_start
+        discord_logger.speach_finish(speach_start_time, speach_finish_time)
 
     async def send_message(channel: discord.TextChannel, send_text: str) -> None:
         """
